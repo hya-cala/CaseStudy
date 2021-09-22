@@ -89,10 +89,73 @@ def countExtend(series, production):
 def findOptimalSpeed_constraint(data):
     OptSpeed = []
     for col in data.columns:
-        print(col)
         tmp = data[col]
         OptSpeed.append(binarySearch(tmp, 0, countExtend))
     return OptSpeed
 
 opt_constraint = findOptimalSpeed_constraint(data)
+
+# Consider two weeks as a whole
+def countBacklog_nw(series, production):
+    n = len(production)
+    total = 0
+    for i,s in enumerate(series):
+        total += s
+        total -= production[i%n]
+        total = max(0, total)
+    return max(0,total-series[50] - series[49] - series[48])
+
+def countExtend_nw(series, production):
+    curr = deque(series[0:4])
+    total = 0
+    n = len(production)
+    for i in range(4):
+        tmp = production[i%n]
+        for j in range(i):
+            tmpp = min(curr[j], tmp)
+            curr[j] = max(0, curr[j] - tmpp)
+            tmp -= tmpp
+    
+    for i in range(4, len(series)):
+        total += curr.popleft()
+        curr.append(series[i])
+        tmp= production[i%n]
+        for j in range(4):
+            tmpp = min(curr[j], tmp)
+            curr[j] = max(0, curr[j] - tmpp)
+            tmp -= tmpp
+    return total
             
+def search_2w(series, backlogs,countFunc = countExtend_nw):
+    max_tmp = max(series)
+    output = []
+    for i in range(1,max_tmp):
+        for j in range(max_tmp):
+            if countFunc(series, [i,j])<=backlogs:
+                output.append([i,j])
+                break
+        if j == 0:
+            break
+    return output
+    
+def findOptimalSpeed_nw_4wconstraint(data):
+    OptSpeed = []
+    for col in data.columns:
+        tmp = data[col]
+        OptSpeed.append(binarySearch(tmp, 0, countExtend))
+    return OptSpeed
+
+for col in data.columns:
+    print('-----------------%s-----------------'%col)
+    print(search_2w(data[col],0))
+
+print('\n=============================Considering Backlog Only===========================\n')
+
+for col in data.columns:
+    print('-----------------%s-----------------'%col)
+    print(search_2w(data[col],0,countBacklog_nw))
+
+
+
+
+
